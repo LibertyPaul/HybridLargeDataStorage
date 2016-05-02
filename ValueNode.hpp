@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <utility>
+#include <boost/optional.hpp>
 
 template<typename Key, typename Value>
 class ValueNode : public BaseNode<Key, Value>{
@@ -22,14 +23,27 @@ public:
 		this->addTail(std::move(nonConstKey), value);
 	}
 
-	virtual Value getValue(Key &&key) const{
+	virtual boost::optional<const Value &> getValue(Key &&key) const{
 		Key currentKey(key);
 		assert(currentKey.empty());
 
 		return this->value;
 	}
 
-	virtual Value getValue(const Key &key) const{
+	virtual boost::optional<const Value &> getValue(const Key &key) const{
+		Key nonConstKey(key);
+		return this->getValue(std::move(key));
+	}
+
+
+	virtual boost::optional<Value &> getValue(Key &&key){
+		Key currentKey(key);
+		assert(currentKey.empty());
+
+		return this->value;
+	}
+
+	virtual boost::optional<Value &> getValue(const Key &key){
 		Key nonConstKey(key);
 		return this->getValue(std::move(key));
 	}

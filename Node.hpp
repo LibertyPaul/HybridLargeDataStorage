@@ -7,6 +7,7 @@
 #include <array>
 #include <utility>
 #include <cassert>
+#include <boost/optional.hpp>
 
 template<typename Key, typename Value>
 class NodeFactory;
@@ -48,17 +49,43 @@ public:
 	}
 
 
-	virtual Value getValue(Key &&key) const{
+	virtual boost::optional<const Value &> getValue(Key &&key) const{
 		Key currentKey(key);
 		assert(key.empty() == false);
 
 		const size_t index = currentKey.front().toIndex();
+		if(this->tails.at(index) == nullptr){
+			return boost::optional<const Value &>();
+		}
+
+		currentKey.pop_front();
+
+		const BaseNode<Key, Value> *tail = this->tails.at(index);
+		return tail->getValue(std::move(currentKey));
+	}
+
+	virtual boost::optional<const Value &> getValue(const Key &key) const{
+		Key nonConstKey(key);
+		return this->getValue(std::move(nonConstKey));
+	}
+
+
+
+	virtual boost::optional<Value &> getValue(Key &&key){
+		Key currentKey(key);
+		assert(key.empty() == false);
+
+		const size_t index = currentKey.front().toIndex();
+		if(this->tails.at(index) == nullptr){
+			return boost::optional<Value &>();
+		}
+
 		currentKey.pop_front();
 
 		return this->tails.at(index)->getValue(std::move(currentKey));
 	}
 
-	virtual Value getValue(const Key &key) const{
+	virtual boost::optional<Value &> getValue(const Key &key){
 		Key nonConstKey(key);
 		return this->getValue(std::move(nonConstKey));
 	}

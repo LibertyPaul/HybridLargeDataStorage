@@ -8,6 +8,7 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
+#include <boost/optional.hpp>
 
 template<typename Key, typename Value>
 class HybridLargeDataStorage{
@@ -54,12 +55,33 @@ public:
 		this->heads.at(index)->addTail(std::move(key), value);
 	}
 
-	Value getValue(Key key) const{
+	boost::optional<const Value &> getValue(Key key) const{
 		assert(key.size() == this->headSize + this->tailSize);
 
 		const size_t index = this->getIndex(key);
 		for(size_t i = 0; i < this->headSize; ++i){
 			key.pop_front();
+		}
+
+		if(this->heads.at(index) == nullptr){
+			return boost::optional<Value &>();
+		}
+
+		return this->heads.at(index)->getValue(std::move(key));
+
+	}
+
+
+	boost::optional<Value &> getValue(Key key){
+		assert(key.size() == this->headSize + this->tailSize);
+
+		const size_t index = this->getIndex(key);
+		for(size_t i = 0; i < this->headSize; ++i){
+			key.pop_front();
+		}
+
+		if(this->heads.at(index) == nullptr){
+			return boost::optional<Value &>();
 		}
 
 		return this->heads.at(index)->getValue(std::move(key));

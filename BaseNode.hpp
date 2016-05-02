@@ -1,6 +1,8 @@
 #ifndef BASENODE_HPP
 #define BASENODE_HPP
 
+#include <boost/optional.hpp>
+
 template<typename Key, typename Value>
 class BaseNode{
 public:
@@ -11,8 +13,11 @@ public:
 	virtual void addTail(const Key &key, const Value &value) = 0;
 
 
-	virtual Value getValue(Key &&key) const = 0;
-	virtual Value getValue(const Key &key) const = 0;
+	virtual boost::optional<const Value &> getValue(Key &&key) const = 0;
+	virtual boost::optional<const Value &> getValue(const Key &key) const = 0;
+
+	virtual boost::optional<Value &> getValue(Key &&key) = 0;
+	virtual boost::optional<Value &> getValue(const Key &key) = 0;
 };
 
 #endif // BASENODE_HPP

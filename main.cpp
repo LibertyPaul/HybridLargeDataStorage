@@ -4,6 +4,7 @@
 #include <list>
 #include <cassert>
 #include <initializer_list>
+#include <boost/optional.hpp>
 
 using namespace std;
 
@@ -61,9 +62,33 @@ int main(){
 
 	hlds.insert(key1, value1);
 
-	const Value res = hlds.getValue(key1);
-	assert(res == value1);
+	const boost::optional<Value &> res = hlds.getValue(key1);
+	assert(res.get() == value1);
 
+
+	Key key2 = {
+		{KeyItem(Alphabet::T)},
+		{KeyItem(Alphabet::T)},
+		{KeyItem(Alphabet::G)},
+		{KeyItem(Alphabet::C)}
+	};
+
+	const boost::optional<Value &> invRes = hlds.getValue(key2);
+
+	assert(!invRes);
+
+
+	hlds.insert(key2, 100);
+
+	boost::optional<Value &> res1 = hlds.getValue(key1);
+	boost::optional<Value &> res2 = hlds.getValue(key2);
+	assert(res1.get() != res2.get());
+
+	res1.get() = 200;
+	res2.get() = 200;
+
+	assert(hlds.getValue(key1).get() == 200);
+	assert(hlds.getValue(key2).get() == 200);
 
 
 }
