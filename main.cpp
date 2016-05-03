@@ -146,7 +146,7 @@ void largeDataTest(){
 	std::default_random_engine rg(std::chrono::system_clock::now().time_since_epoch().count());
 	std::uniform_int_distribution<size_t> distr;
 
-	const size_t count = 10000000;
+	const size_t count = 1000000;
 	for(size_t i = 0; i < count; ++i){
 		const Key currentKey = randomKey(keySize);
 		const Value currentValue = distr(rg);
@@ -161,15 +161,48 @@ void largeDataTest(){
 }
 
 void multiAccessTest(){
+	const size_t keySize = 25;
+	const size_t headSize = 10;
+	const size_t tailSize = keySize - headSize;
+	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
+
+
+	const size_t count = 1000;
+	std::vector<Key> keys;
+	for(size_t i = 0; i < count; ++i){
+		keys.push_back(randomKey(keySize));
+	}
+
+
+	for(const auto &key : keys){
+		assert(!hlds.getValue(key).is_initialized());
+	}
+
+	const Value startValue = 0;
+	for(const auto &key : keys){
+		hlds.insert(key, startValue);
+	}
+
+	for(const auto &key : keys){
+		assert(hlds.getValue(key).get() == startValue);
+	}
+
+	for(const auto &key : keys){
+		hlds.getValue(key).get() += 1;
+	}
+
+	for(const auto &key : keys){
+		assert(hlds.getValue(key).get() == startValue + 1);
+	}
 
 }
 
 #define TEST(function){\
-	std::cout << #function << " was started" << std::endl;\
+	std::cout << #function << "\twas started" << std::endl;\
 	const auto startTime = std::chrono::steady_clock::now();\
 	function();\
 	const auto endTime = std::chrono::steady_clock::now();\
-	std::cout << #function << " [PASSED]. duration: " << std::fixed << std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000000. << "s" << std::endl;\
+	std::cout << #function << "\t[PASSED]. duration: " << std::fixed << std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000000. << "s" << std::endl << std::endl;\
 	}\
 
 
@@ -177,6 +210,7 @@ void multiAccessTest(){
 int main(){
 	TEST(insertionTest);
 	TEST(largeDataTest);
+	TEST(multiAccessTest);
 
 
 }
