@@ -14,13 +14,13 @@ class ValueNode : public BaseNode<Key, Value>{
 public:
 	ValueNode(const Value &value): value(value){}
 
-	virtual void addTail(Key &&, const Value &){
+	virtual void addTail(Key &&, const Value &, NodeFactory<Key, Value> &){
 		assert(true);
 	}
 
-	virtual void addTail(const Key &key, const Value &value){
+	virtual void addTail(const Key &key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
 		Key nonConstKey(key);
-		this->addTail(std::move(nonConstKey), value);
+		this->addTail(std::move(nonConstKey), value, nodeFactory);
 	}
 
 	virtual boost::optional<const Value &> getValue(Key &&key) const{

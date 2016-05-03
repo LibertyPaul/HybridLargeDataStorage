@@ -13,6 +13,9 @@ template<typename Key, typename Value>
 class NodeFactory;
 
 template<typename Key, typename Value>
+class BaseNode;
+
+template<typename Key, typename Value>
 class Node : public BaseNode<Key, Value>{
 	std::array<BaseNode<Key, Value> *, Key::alphabetSize> tails;
 
@@ -22,12 +25,12 @@ public:
 	}
 
 	virtual ~Node(){
-		for(const auto &tail : this->tails){
+		for(auto &tail : this->tails){
 			delete tail;
 		}
 	}
 
-	virtual void addTail(Key &&key, const Value &value){
+	virtual void addTail(Key &&key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
 		Key currentKey(key);
 		assert(key.empty() == false);
 
@@ -35,17 +38,17 @@ public:
 		currentKey.pop_front();
 
 		if(this->tails.at(index) == nullptr){
-			this->tails.at(index) = NodeFactory<Key, Value>::createNode(currentKey, value);
+			this->tails.at(index) = nodeFactory.createNode(currentKey, value);
 		}
 
 		if(currentKey.size() > 0){
-			this->tails.at(index)->addTail(std::move(currentKey), value);
+			this->tails.at(index)->addTail(std::move(currentKey), value, nodeFactory);
 		}
 	}
 
-	virtual void addTail(const Key &key, const Value &value){
+	virtual void addTail(const Key &key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
 		Key nonConstKey(key);
-		this->addTail(std::move(nonConstKey), value);
+		this->addTail(std::move(nonConstKey), value, nodeFactory);
 	}
 
 

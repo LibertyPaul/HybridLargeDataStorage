@@ -15,6 +15,7 @@ class HybridLargeDataStorage{
 	const size_t headSize;
 	const size_t tailSize;
 	std::vector<BaseNode<Key, Value> *> heads;
+	NodeFactory<Key, Value> nodeFactory;
 
 
 	size_t getIndex(const Key &key) const{
@@ -40,6 +41,12 @@ public:
 		this->heads.resize(headCount);
 	}
 
+	~HybridLargeDataStorage(){
+		for(auto &head : this->heads){
+			delete head;
+		}
+	}
+
 	void insert(Key key, const Value &value){
 		assert(key.size() == this->headSize + this->tailSize);
 
@@ -49,10 +56,10 @@ public:
 		}
 
 		if(this->heads.at(index) == nullptr){
-			this->heads.at(index) = NodeFactory<Key, Value>::createNode(key, value);
+			this->heads.at(index) = this->nodeFactory.createNode(key, value);
 		}
 
-		this->heads.at(index)->addTail(std::move(key), value);
+		this->heads.at(index)->addTail(std::move(key), value, this->nodeFactory);
 	}
 
 	boost::optional<const Value &> getValue(Key key) const{
