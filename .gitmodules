@@ -1,0 +1,3 @@
+[submodule "TinyTestFramework"]
+	path = TinyTestFramework
+	url = https://github.com/LibertyPaul/TinyTestFramework.git
