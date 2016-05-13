@@ -27,9 +27,6 @@
 *.out
 *.app
 
-#Qt
-*.pro*
-*.pri
 *.autosave
 
 #Boost
