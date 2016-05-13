@@ -1,5 +1,6 @@
 #include "HybridLargeDataStorage.hpp"
 
+#include <TinyTestFramework/TinyTestFramework.hpp>
 #include <iostream>
 #include <list>
 #include <cassert>
@@ -197,20 +198,11 @@ void multiAccessTest(){
 
 }
 
-#define TEST(function){\
-	std::cout << #function << "\twas started" << std::endl;\
-	const auto startTime = std::chrono::steady_clock::now();\
-	function();\
-	const auto endTime = std::chrono::steady_clock::now();\
-	std::cout << #function << "\t[PASSED]. duration: " << std::fixed << std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000000. << "s" << std::endl << std::endl;\
-	}\
-
-
 
 int main(){
-	TEST(insertionTest);
-	TEST(largeDataTest);
-	TEST(multiAccessTest);
+	TTF_TEST(insertionTest);
+	TTF_TEST(largeDataTest);
+	TTF_TEST(multiAccessTest);
 
 
 }
