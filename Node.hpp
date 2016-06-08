@@ -2,22 +2,24 @@
 #define NODE_HPP
 
 #include "BaseNode.hpp"
-#include "NodeFactory.hpp"
+#include "TailTree.hpp"
 
 #include <array>
 #include <utility>
 #include <cassert>
-#include <boost/optional.hpp>
-
-template<typename Key, typename Value>
-class NodeFactory;
+#include <algorithm>
+#include <functional>
 
 template<typename Key, typename Value>
 class BaseNode;
 
 template<typename Key, typename Value>
+class TailTree;
+
+template<typename Key, typename Value>
 class Node : public BaseNode<Key, Value>{
-	std::array<BaseNode<Key, Value> *, Key::alphabetSize> tails;
+	typedef std::array<BaseNode<Key, Value> *, Key::value_type::alphabetSize> TailsStorage;
+	TailsStorage tails;
 
 public:
 	Node(){
@@ -30,68 +32,49 @@ public:
 		}
 	}
 
-	virtual void addTail(Key &&key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
-		Key currentKey(key);
-		assert(key.empty() == false);
+	enum class Direction{
+		lower,
+		higher
+	};
 
-		const size_t index = currentKey.front().toIndex();
-		currentKey.pop_front();
+	typedef std::pair<BaseNode<Key, Value> *, size_t> BranchInfo;
 
-		if(this->tails.at(index) == nullptr){
-			this->tails.at(index) = nodeFactory.createNode(currentKey, value);
+	BranchInfo getClosestExistingBranch(const Direction direction, const int beginPos = -1){
+		assert(beginPos >= -1 && beginPos <= this->tails.size());
+		size_t move = 0;
+
+		switch(direction){
+		case Direction::higher:
+			move = 1;
+			break;
+
+		case Direction::lower:
+			move = -1;
+			break;
 		}
 
-		if(currentKey.size() > 0){
-			this->tails.at(index)->addTail(std::move(currentKey), value, nodeFactory);
-		}
-	}
+		assert(move != 0);
 
-	virtual void addTail(const Key &key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
-		Key nonConstKey(key);
-		this->addTail(std::move(nonConstKey), value, nodeFactory);
-	}
+		size_t pos;
+		bool found = false;
 
-
-	virtual boost::optional<const Value &> getValue(Key &&key) const{
-		Key currentKey(key);
-		assert(key.empty() == false);
-
-		const size_t index = currentKey.front().toIndex();
-		if(this->tails.at(index) == nullptr){
-			return boost::optional<const Value &>();
+		for(int i = beginPos + move; i < this->tails.size() && i >= 0; i += move){
+			if(this->tails.at(i) != nullptr){
+				pos = static_cast<size_t>(i);
+				found = true;
+				break;
+			}
 		}
 
-		currentKey.pop_front();
-
-		const BaseNode<Key, Value> *tail = this->tails.at(index);
-		return tail->getValue(std::move(currentKey));
-	}
-
-	virtual boost::optional<const Value &> getValue(const Key &key) const{
-		Key nonConstKey(key);
-		return this->getValue(std::move(nonConstKey));
-	}
-
-
-
-	virtual boost::optional<Value &> getValue(Key &&key){
-		Key currentKey(key);
-		assert(key.empty() == false);
-
-		const size_t index = currentKey.front().toIndex();
-		if(this->tails.at(index) == nullptr){
-			return boost::optional<Value &>();
+		if(found == false){
+			return BranchInfo(nullptr, 0);
 		}
 
-		currentKey.pop_front();
-
-		return this->tails.at(index)->getValue(std::move(currentKey));
+		return BranchInfo(this->tails.at(pos), pos);
 	}
 
-	virtual boost::optional<Value &> getValue(const Key &key){
-		Key nonConstKey(key);
-		return this->getValue(std::move(nonConstKey));
-	}
+	friend class TailTree<Key, Value>;
+	friend typename TailTree<Key, Value>::iterator;
 };
 
 #endif // NODE_HPP

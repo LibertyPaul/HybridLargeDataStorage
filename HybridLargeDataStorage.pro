@@ -14,8 +14,11 @@ HEADERS += \
     BaseNode.hpp \
     Node.hpp \
     ValueNode.hpp \
-    NodeFactory.hpp \
+    TailTreeIterator.hpp \
+    TailTree.hpp \
+    HLDSIterator.hpp \
+    HeadsIterator.hpp \
+    HeadsHolder.hpp
 
-INCLUDEPATH += ./boost_1_60_0/
 INCLUDEPATH += ./TinyTestFramework/
 INCLUDEPATH -= ./TinyTestFramework/main.cpp

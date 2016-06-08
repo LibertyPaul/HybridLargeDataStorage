@@ -2,97 +2,92 @@
 #define HYBRIDLARGEDATASTORAGE_HPP
 
 #include "BaseNode.hpp"
-#include "NodeFactory.hpp"
+#include "TailTree.hpp"
+#include "HLDSIterator.hpp"
+#include "HeadsHolder.hpp"
 
 #include <utility>
 #include <vector>
 #include <cassert>
 #include <cstddef>
-#include <boost/optional.hpp>
+#include <algorithm>
+
+template<typename Key, typename Value>
+class TailTree;
+
+template<typename Key, typename Value>
+class HLDSIterator;
 
 template<typename Key, typename Value>
 class HybridLargeDataStorage{
+public:
+	typedef HLDSIterator<Key, Value> iterator;
+	
+private:
 	const size_t headSize;
 	const size_t tailSize;
-	std::vector<BaseNode<Key, Value> *> heads;
-	NodeFactory<Key, Value> nodeFactory;
+	HeadsHolder<Key, Value> headsHolder;
 
-
-	size_t getIndex(const Key &key) const{
-		assert(key.size() >= this->headSize);
-		size_t result = 0;
-		size_t multiplier = 1;
-
-		for(size_t i = 0; i < this->headSize; ++i){
-			result += key.at(i).toIndex() * multiplier;
-			multiplier *= Key::alphabetSize;
-		}
-
-		return result;
-	}
 
 public:
-	HybridLargeDataStorage(const size_t headSize, const size_t tailSize): headSize(headSize), tailSize(tailSize){
-		size_t headCount = 1;
-		for(size_t i = 0; i < this->headSize; ++i){
-			headCount *= Key::alphabetSize;
-		}
+	HybridLargeDataStorage(const size_t headSize, const size_t tailSize): headSize(headSize), tailSize(tailSize), headsHolder(headSize, tailSize){
 
-		this->heads.resize(headCount);
 	}
 
 	~HybridLargeDataStorage(){
-		for(auto &head : this->heads){
-			delete head;
-		}
+
 	}
 
 	void insert(Key key, const Value &value){
 		assert(key.size() == this->headSize + this->tailSize);
 
-		const size_t index = this->getIndex(key);
-		for(size_t i = 0; i < this->headSize; ++i){
-			key.pop_front();
-		}
+		Key headKey(this->headSize);
+		std::copy(key.cbegin(), key.cbegin() + this->headSize, headKey.begin());
 
-		if(this->heads.at(index) == nullptr){
-			this->heads.at(index) = this->nodeFactory.createNode(key, value);
-		}
+		typename HeadsHolder<Key, Value>::iterator head = this->headsHolder.find(std::move(headKey));
+		assert(head != this->headsHolder.end());
 
-		this->heads.at(index)->addTail(std::move(key), value, this->nodeFactory);
+		Key tailKey(this->tailSize);
+		std::copy(key.cbegin() + this->headSize, key.cend(), tailKey.begin());
+
+		head->addTail(tailKey, value);
 	}
 
-	boost::optional<const Value &> getValue(Key key) const{
+	iterator find(const Key &key){
 		assert(key.size() == this->headSize + this->tailSize);
 
-		const size_t index = this->getIndex(key);
-		for(size_t i = 0; i < this->headSize; ++i){
-			key.pop_front();
-		}
+		Key headKey(this->headSize);
+		std::copy(key.begin(), key.begin() + this->headSize, headKey.begin());
 
-		if(this->heads.at(index) == nullptr){
-			return boost::optional<Value &>();
-		}
+		const typename HeadsHolder<Key, Value>::iterator headsIterator = this->headsHolder.find(headKey);
+		assert(headsIterator != this->headsHolder.end());
 
-		return this->heads.at(index)->getValue(std::move(key));
+		Key tailKey(this->tailSize);
+		std::copy(key.begin() + this->headSize, key.end(), tailKey.begin());
 
+		typename TailTree<Key, Value>::iterator tailIterator = headsIterator->find(std::move(tailKey));
+		typename TailTree<Key, Value>::iterator tailTreeEnd = headsIterator->end();
+
+		return iterator(std::move(headsIterator), this->headsHolder.end(), std::move(tailIterator), std::move(tailTreeEnd));
 	}
 
+	iterator begin(){
+		const typename HeadsHolder<Key, Value>::iterator firstNotEmptyHead = std::find_if(this->headsHolder.begin(), this->headsHolder.end(), [](const typename HeadsHolder<Key, Value>::value_type &head){
+			return head.begin() != head.end();
+		});
 
-	boost::optional<Value &> getValue(Key key){
-		assert(key.size() == this->headSize + this->tailSize);
-
-		const size_t index = this->getIndex(key);
-		for(size_t i = 0; i < this->headSize; ++i){
-			key.pop_front();
+		if(firstNotEmptyHead == this->headsHolder.end()){
+			return this->end();
 		}
 
-		if(this->heads.at(index) == nullptr){
-			return boost::optional<Value &>();
-		}
+		typename TailTree<Key, Value>::iterator tailTreeIterator = firstNotEmptyHead->begin();
+		typename TailTree<Key, Value>::iterator tailTreeEnd = firstNotEmptyHead->end();
 
-		return this->heads.at(index)->getValue(std::move(key));
+		return iterator(std::move(firstNotEmptyHead), this->headsHolder.end(), std::move(tailTreeIterator), std::move(tailTreeEnd));
+	}
 
+	iterator end(){
+		return iterator();
 	}
 
 };

@@ -1,68 +1,151 @@
 #include "HybridLargeDataStorage.hpp"
+#include "TinyTestFramework/TinyTestFramework.hpp"
 
-#include <TinyTestFramework/TinyTestFramework.hpp>
 #include <iostream>
 #include <list>
 #include <cassert>
 #include <initializer_list>
-#include <boost/optional.hpp>
 #include <chrono>
 #include <random>
 #include <map>
+#include <stdexcept>
 
 using namespace std;
 
 
 enum class Alphabet{
-	A = 0, T, G, C
+	A = 0, T, G, C, N
 };
 
 class KeyItem{
 	Alphabet index;
 public:
+	static constexpr size_t alphabetSize = 5;
+	static constexpr Alphabet min_value = Alphabet::A;
+	static constexpr Alphabet max_value = Alphabet::N;
+
 	typedef Alphabet value_type;
-	KeyItem(const Alphabet index): index(index){}
+
+	explicit KeyItem(const Alphabet index): index(index){}
 
 	size_t toIndex() const{
 		return static_cast<size_t>(index);
 	}
 
+	static KeyItem fromIndex(const size_t index){
+		if(index > static_cast<size_t>(max_value)){
+			throw std::overflow_error("");
+		}
+
+		return KeyItem(static_cast<Alphabet>(index));
+	}
+
+	KeyItem &operator=(const KeyItem &keyItem){
+		this->index = keyItem.index;
+		return *this;
+	}
+
+	bool operator==(const Alphabet &alphabet) const{
+		return this->index == alphabet;
+	}
+
 	bool operator==(const KeyItem &o) const{
-		return this->index == o.index;
+		return *this == o.index;
 	}
 
 	bool operator!=(const KeyItem &o) const{
-		return !this->operator==(o);
+		return !(*this == o);
 	}
 
 	bool operator<(const KeyItem &o) const{
 		return this->index < o.index;
 	}
+
+	KeyItem &operator++(){
+		*this = KeyItem::fromIndex(this->toIndex() + 1);
+		return *this;
+	}
 };
 
 class Key : public std::vector<KeyItem>{
 public:
-	static constexpr size_t alphabetSize = 4;
 
 	Key(){}
+	Key(Key &&key): std::vector<KeyItem>(static_cast<std::vector<KeyItem> &&>(key)){}
+	Key(const Key &key): std::vector<KeyItem>(key){}
+	Key(const size_t size): std::vector<KeyItem>(size, KeyItem(value_type::min_value)){}
 	Key(std::initializer_list<KeyItem> il): std::vector<KeyItem>(il){}
 
-
-	KeyItem at(const size_t index) const{
-		assert(index < this->size());
-		return static_cast<const std::vector<KeyItem> *>(this)->at(index);
+	void resize(const size_t size){
+		std::vector<KeyItem> &base = *this;
+		base.resize(size, KeyItem(value_type::min_value));
 	}
 
-	void pop_front(){
-		this->erase(this->begin());
+	size_t toIndex() const{
+		size_t result = 0;
+		size_t multiplier = 1;
+
+		for(auto it = this->crbegin(); it != this->crend(); ++it){
+			result += it->toIndex() * multiplier;
+			multiplier *= value_type::alphabetSize;
+		}
+
+		return result;
 	}
 
-	size_t size() const{
-		return static_cast<const std::vector<KeyItem> *>(this)->size();
+	static Key fromIndex(size_t index, const size_t size){
+		Key resultReversed;
+		resultReversed.reserve(size);
+
+		while(index != 0){
+			const size_t currentIndex = index % value_type::alphabetSize;
+			const KeyItem currentKeyItem = KeyItem::fromIndex(currentIndex);
+			resultReversed.push_back(currentKeyItem);
+		}
+
+		if(resultReversed.size() != size){
+			throw std::overflow_error("");
+		}
+
+		Key result;
+		result.resize(resultReversed.size());
+
+		std::copy(resultReversed.crbegin(), resultReversed.crend(), result.begin());
+
+		return result;
 	}
 
-	bool empty() const{
-		return static_cast<const std::vector<KeyItem> *>(this)->empty();
+	Key &operator=(Key key){
+		std::vector<KeyItem> &base1 = *this;
+		std::vector<KeyItem> &base2 = key;
+
+		base1 = std::move(base2);
+
+		return *this;
+	}
+
+	Key &operator++(){
+		Key keyCopy = *this;
+		auto it = keyCopy.rbegin();
+		while(it != keyCopy.rend()){
+			if(*it == value_type::max_value){
+				*it = KeyItem(value_type::min_value);
+			}
+			else{
+				++*it;
+				break;
+			}
+
+			++it;
+		}
+
+		if(it == keyCopy.rend()){
+			throw std::overflow_error("");
+		}
+
+		*this = std::move(keyCopy);
+
+		return *this;
 	}
 };
 
@@ -92,8 +175,9 @@ void insertionTest(){
 
 	hlds.insert(key1, value1);
 
-	const boost::optional<Value &> res = hlds.getValue(key1);
-	assert(res.get() == value1);
+	const auto res = hlds.find(key1);
+	assert(res != hlds.end());
+	assert(*res == value1);
 
 
 	Key key2 = {
@@ -103,27 +187,27 @@ void insertionTest(){
 		{KeyItem(Alphabet::C)}
 	};
 
-	const boost::optional<Value &> invRes = hlds.getValue(key2);
+	const auto invRes = hlds.find(key2);
 
-	assert(!invRes);
+	assert(invRes == hlds.end());
 
 
 	hlds.insert(key2, 100);
 
-	boost::optional<Value &> res1 = hlds.getValue(key1);
-	boost::optional<Value &> res2 = hlds.getValue(key2);
-	assert(res1.get() != res2.get());
+	auto res1 = hlds.find(key1);
+	auto res2 = hlds.find(key2);
+	assert(*res1 != *res2);
 
-	res1.get() = 200;
-	res2.get() = 200;
+	*res1 = 200;
+	*res2 = 200;
 
-	assert(hlds.getValue(key1).get() == 200);
-	assert(hlds.getValue(key2).get() == 200);
+	assert(*hlds.find(key1) == 200);
+	assert(*hlds.find(key2) == 200);
 }
 
 Key randomKey(const size_t size){
 	static std::default_random_engine rg(std::chrono::system_clock::now().time_since_epoch().count());
-	static std::uniform_int_distribution<uint8_t> distr(0, Key::alphabetSize - 1);
+	static std::uniform_int_distribution<uint8_t> distr(0, Key::value_type::alphabetSize - 1);
 
 	Key key;
 
@@ -156,7 +240,9 @@ void largeDataTest(){
 	}
 
 	for(auto value = values.cbegin(); value != values.cend(); ++value){
-		assert(hlds.getValue(value->first).get() == value->second);
+		auto it = hlds.find(value->first);
+		assert(it != hlds.end());
+		assert(*it == value->second);
 	}
 
 }
@@ -176,7 +262,7 @@ void multiAccessTest(){
 
 
 	for(const auto &key : keys){
-		assert(!hlds.getValue(key).is_initialized());
+		assert(hlds.find(key) == hlds.end());
 	}
 
 	const Value startValue = 0;
@@ -185,18 +271,19 @@ void multiAccessTest(){
 	}
 
 	for(const auto &key : keys){
-		assert(hlds.getValue(key).get() == startValue);
+		assert(*hlds.find(key) == startValue);
 	}
 
 	for(const auto &key : keys){
-		hlds.getValue(key).get() += 1;
+		*hlds.find(key) += 1;
 	}
 
 	for(const auto &key : keys){
-		assert(hlds.getValue(key).get() == startValue + 1);
+		assert(*hlds.find(key) == startValue + 1);
 	}
 
 }
+
 
 
 int main(){

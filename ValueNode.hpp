@@ -5,47 +5,20 @@
 
 #include <cassert>
 #include <utility>
-#include <boost/optional.hpp>
 
 template<typename Key, typename Value>
 class ValueNode : public BaseNode<Key, Value>{
 	Value value;
 
 public:
-	ValueNode(const Value &value): value(value){}
+	ValueNode(Value value): value(std::move(value)){}
 
-	virtual void addTail(Key &&, const Value &, NodeFactory<Key, Value> &){
-		assert(true);
-	}
-
-	virtual void addTail(const Key &key, const Value &value, NodeFactory<Key, Value> &nodeFactory){
-		Key nonConstKey(key);
-		this->addTail(std::move(nonConstKey), value, nodeFactory);
-	}
-
-	virtual boost::optional<const Value &> getValue(Key &&key) const{
-		Key currentKey(key);
-		assert(currentKey.empty());
-
+	virtual const Value &getValue() const{
 		return this->value;
 	}
 
-	virtual boost::optional<const Value &> getValue(const Key &key) const{
-		Key nonConstKey(key);
-		return this->getValue(std::move(key));
-	}
-
-
-	virtual boost::optional<Value &> getValue(Key &&key){
-		Key currentKey(key);
-		assert(currentKey.empty());
-
+	virtual Value &getValue(){
 		return this->value;
-	}
-
-	virtual boost::optional<Value &> getValue(const Key &key){
-		Key nonConstKey(key);
-		return this->getValue(std::move(key));
 	}
 };
 
