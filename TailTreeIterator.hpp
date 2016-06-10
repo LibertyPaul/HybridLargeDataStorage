@@ -5,6 +5,7 @@
 #include "Node.hpp"
 #include "ValueNode.hpp"
 #include "TailTree.hpp"
+#include "BranchHolder.hpp"
 
 #include <vector>
 #include <cassert>
@@ -21,9 +22,7 @@ class TailTree;
 template<typename Key, typename Value>
 class TailTreeIterator{
 	Key tailKey;
-
-	typedef std::vector<BaseNode<Key, Value> *> BranchHolder;
-	BranchHolder branch;
+	BranchHolder<Key, Value> branch;
 
 protected:
 	BaseNode<Key, Value> *root() const{
@@ -31,7 +30,7 @@ protected:
 	}
 
 private:
-	TailTreeIterator(Key tailKey, std::vector<BaseNode<Key, Value> *> branch): tailKey(std::move(tailKey)), branch(std::move(branch)){
+	TailTreeIterator(Key tailKey, BranchHolder<Key, Value> branch): tailKey(std::move(tailKey)), branch(std::move(branch)){
 		assert(this->tailKey.size() + 1 == this->branch.size());
 
 		for(size_t i = 0; i < this->branch.size() - 1; ++i){
@@ -45,12 +44,30 @@ private:
 	}
 
 	bool isValid() const{
-		return branch.empty() == false;
+		return branch.complete();
 	}
 
 public:
-	TailTreeIterator(){
+	TailTreeIterator(){}
+	TailTreeIterator(const TailTreeIterator &tti): tailKey(tti.tailKey), branch(tti.branch){}
+	TailTreeIterator(TailTreeIterator &&tti): tailKey(std::move(tti.tailKey)), branch(std::move(tti.branch)){}
 
+	TailTreeIterator &operator=(const TailTreeIterator &tti){
+		this->tailKey = tti.tailKey;
+		this->branch = tti.branch;
+
+		return *this;
+	}
+
+	TailTreeIterator &operator=(TailTreeIterator &&tti){
+		std::swap(this->tailKey, tti.tailKey);
+		std::swap(this->branch, tti.branch);
+
+		return *this;
+	}
+
+	const Key &getKey() const{
+		return this->tailKey;
 	}
 
 	bool operator==(const TailTreeIterator &it) const{
@@ -66,11 +83,7 @@ public:
 			throw std::out_of_range("TailTreeIterator is invalid");
 		}
 
-		const BaseNode<Key, Value> * const last = this->branch.back();
-		const ValueNode<Key, Value> * const valueNode = dynamic_cast<const ValueNode<Key, Value> * const>(last);
-		assert(valueNode != nullptr);
-
-		return valueNode->getValue();
+		return this->branch.valueNode()->getValue();
 	}
 
 	Value &operator*(){
@@ -78,21 +91,18 @@ public:
 			throw std::out_of_range("TailTreeIterator is invalid");
 		}
 
-		BaseNode<Key, Value> * const last = this->branch.back();
-		ValueNode<Key, Value> * const valueNode = dynamic_cast<ValueNode<Key, Value> * const>(last);
-		assert(valueNode != nullptr);
-
-		return valueNode->getValue();
+		return this->branch.valueNode()->getValue();
 	}
 
 	TailTreeIterator &operator++(){
-		if(*this == false){
+		if(this->isValid() == false){
 			return *this; // why not? :)
 		}
 
-		const typename Node<Key, Value>::Direction direction = Node<Key, Value>::Direction::higher;
+		constexpr typename Node<Key, Value>::Direction direction = Node<Key, Value>::Direction::higher;
+		bool success = false;
 
-		for(int i = this->branch.size() - 2; i > 0; --i){
+		for(int i = this->branch.size() - 2; i >= 0; --i){
 			Node<Key, Value> *current = dynamic_cast<Node<Key, Value> *>(this->branch.at(i));
 			assert(current != nullptr);
 
@@ -100,15 +110,17 @@ public:
 			typename Node<Key, Value>::BranchInfo closestExistingBranchInfo = current->getClosestExistingBranch(direction, keyItem.toIndex());
 
 			if(closestExistingBranchInfo.first != nullptr){
-				this->branch.erase(this->branch.begin() + i, this->branch.end());
+				success = true;
+				this->branch.erase(this->branch.begin() + i + 1, this->branch.end());
+				this->tailKey.erase(this->tailKey.begin() + i, this->tailKey.end());
 
 				do{
 					this->branch.push_back(closestExistingBranchInfo.first);
-					this->tailKey.push_back(closestExistingBranchInfo.second);
+					this->tailKey.push_back(Key::value_type::fromIndex(closestExistingBranchInfo.second));
 
 					Node<Key, Value> *node = dynamic_cast<Node<Key, Value> *>(this->branch.back());
 					if(node != nullptr){
-						closestExistingBranchInfo = node->getClosestExistingBranch(direction, this->tailKey.back().toIndex());
+						closestExistingBranchInfo = node->getClosestExistingBranch(direction, -1);
 					}
 					else{
 						break;
@@ -117,6 +129,10 @@ public:
 
 				break;
 			}
+		}
+
+		if(success == false){
+			*this = TailTreeIterator<Key, Value>();
 		}
 
 		return *this;

@@ -50,18 +50,17 @@ public:
 		*current = new ValueNode<Key, Value>(std::move(value));
 	}
 
-protected:
+public:
 	bool isEmpty() const{
 		return this->root == nullptr;
 	}
 
-public:
 	iterator begin() const{
 		if(this->isEmpty()){
 			return iterator();
 		}
 
-		std::vector<BaseNode<Key, Value> *> branch;
+		BranchHolder<Key, Value> branch;
 		branch.reserve(this->depth);
 		branch.push_back(this->root);
 
@@ -71,9 +70,9 @@ public:
 		Node<Key, Value> *node = nullptr;
 
 		while((node = dynamic_cast<Node<Key, Value> *>(branch.back())) != nullptr){
-			const auto branchInfo = node->getClosestExistingBranch(-1);
+			const auto branchInfo = node->getClosestExistingBranch(Node<Key, Value>::Direction::higher, -1);
 			branch.push_back(branchInfo.first);
-			key.push_back(branchInfo.second);
+			key.push_back(Key::value_type::fromIndex(branchInfo.second));
 		}
 
 
@@ -89,7 +88,7 @@ public:
 			return iterator();
 		}
 
-		typename iterator::BranchHolder branch;
+		BranchHolder<Key, Value> branch;
 		branch.reserve(key.size() + 1);
 
 		branch.push_back(this->root);

@@ -37,11 +37,11 @@ public:
 		higher
 	};
 
-	typedef std::pair<BaseNode<Key, Value> *, size_t> BranchInfo;
+	typedef std::pair<BaseNode<Key, Value> *, typename Key::value_type::index_t> BranchInfo;
 
 	BranchInfo getClosestExistingBranch(const Direction direction, const int beginPos = -1){
-		assert(beginPos >= -1 && beginPos <= this->tails.size());
-		size_t move = 0;
+		assert(beginPos >= -1 && beginPos <= static_cast<int>(this->tails.size()));
+		int move = 0;
 
 		switch(direction){
 		case Direction::higher:
@@ -58,7 +58,7 @@ public:
 		size_t pos;
 		bool found = false;
 
-		for(int i = beginPos + move; i < this->tails.size() && i >= 0; i += move){
+		for(int i = beginPos + move; i < static_cast<int>(this->tails.size()) && i >= 0; i += move){
 			if(this->tails.at(i) != nullptr){
 				pos = static_cast<size_t>(i);
 				found = true;

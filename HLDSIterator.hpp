@@ -62,12 +62,21 @@ public:
 
 	HLDSIterator &operator++(){
 		++this->tailIterator;
-		while(++this->headsIterator != this->headsEnd && this->tailIterator == this->headsIterator->end()){
-			 this->tailIterator = this->headsIterator->begin();
-		}
 
-		if(this->headsIterator == this->headsEnd){
-			this->tailIterator = this->tailEnd;
+		while(this->tailIterator == this->headsIterator->end()){
+			try{
+				++this->headsIterator;
+			}
+			catch(std::overflow_error &oe){
+				this->headsIterator = this->headsEnd;
+			}
+
+			if(this->headsIterator == this->headsEnd){
+				this->tailIterator = this->tailEnd;
+				return *this;
+			}
+
+			this->tailIterator = this->headsIterator->begin();
 		}
 
 		return *this;

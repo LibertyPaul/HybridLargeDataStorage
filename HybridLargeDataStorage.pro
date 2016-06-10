@@ -18,7 +18,8 @@ HEADERS += \
     TailTree.hpp \
     HLDSIterator.hpp \
     HeadsIterator.hpp \
-    HeadsHolder.hpp
+    HeadsHolder.hpp \
+    BranchHolder.hpp
 
 INCLUDEPATH += ./TinyTestFramework/
 INCLUDEPATH -= ./TinyTestFramework/main.cpp

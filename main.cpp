@@ -9,6 +9,7 @@
 #include <random>
 #include <map>
 #include <stdexcept>
+#include <map>
 
 using namespace std;
 
@@ -20,11 +21,11 @@ enum class Alphabet{
 class KeyItem{
 	Alphabet index;
 public:
+	typedef Alphabet value_type;
+	typedef size_t index_t;
 	static constexpr size_t alphabetSize = 5;
 	static constexpr Alphabet min_value = Alphabet::A;
 	static constexpr Alphabet max_value = Alphabet::N;
-
-	typedef Alphabet value_type;
 
 	explicit KeyItem(const Alphabet index): index(index){}
 
@@ -67,6 +68,10 @@ public:
 	}
 };
 
+constexpr size_t KeyItem::alphabetSize;
+constexpr Alphabet KeyItem::min_value;
+constexpr Alphabet KeyItem::max_value;
+
 class Key : public std::vector<KeyItem>{
 public:
 
@@ -76,9 +81,9 @@ public:
 	Key(const size_t size): std::vector<KeyItem>(size, KeyItem(value_type::min_value)){}
 	Key(std::initializer_list<KeyItem> il): std::vector<KeyItem>(il){}
 
-	void resize(const size_t size){
+	void resize(const size_t size, const value_type::value_type &fillValue = value_type::min_value){
 		std::vector<KeyItem> &base = *this;
-		base.resize(size, KeyItem(value_type::min_value));
+		base.resize(size, KeyItem(fillValue));
 	}
 
 	size_t toIndex() const{
@@ -99,12 +104,17 @@ public:
 
 		while(index != 0){
 			const size_t currentIndex = index % value_type::alphabetSize;
+			index /= value_type::alphabetSize;
 			const KeyItem currentKeyItem = KeyItem::fromIndex(currentIndex);
 			resultReversed.push_back(currentKeyItem);
 		}
 
-		if(resultReversed.size() != size){
+		if(resultReversed.size() > size){
 			throw std::overflow_error("");
+		}
+
+		if(resultReversed.size() < size){
+			resultReversed.resize(size, value_type::min_value);
 		}
 
 		Key result;
@@ -147,6 +157,22 @@ public:
 
 		return *this;
 	}
+
+	void push_back(value_type value){
+		std::vector<KeyItem> &base1 = *this;
+		base1.push_back(std::move(value));
+	}
+
+	Key operator+(const Key &key) const{
+		Key result(*this);
+		result.reserve(this->size() + key.size());
+
+		for(const auto val : key){
+			result.push_back(val);
+		}
+
+		return result;
+	}
 };
 
 bool operator<(const Key &lhs, const Key &rhs){
@@ -162,6 +188,48 @@ bool operator<(const Key &lhs, const Key &rhs){
 }
 
 typedef uint64_t Value;
+
+
+
+
+
+
+
+
+
+
+
+void keyTest(){
+	const Key key1 = {
+		{KeyItem(Alphabet::T)},
+		{KeyItem(Alphabet::N)},
+		{KeyItem(Alphabet::G)},
+		{KeyItem(Alphabet::A)}
+	};
+
+	const size_t index = key1.toIndex();
+	assert(key1 == Key::fromIndex(index, key1.size()));
+
+
+
+	const Key key2 = {
+		{KeyItem(Alphabet::A)},
+		{KeyItem(Alphabet::C)},
+		{KeyItem(Alphabet::N)},
+		{KeyItem(Alphabet::G)}
+	};
+
+	const Key key12 = key1 + key2;
+
+	size_t factor = 1;
+	for(size_t i = 0; i < key2.size(); ++i){
+		factor *= Key::value_type::alphabetSize;
+	}
+
+	const size_t index12 = key2.toIndex() + key1.toIndex() * factor;
+
+	assert(key12.toIndex() == index12);
+}
 
 void insertionTest(){
 	HybridLargeDataStorage<Key, Value> hlds(2, 2);
@@ -217,6 +285,47 @@ Key randomKey(const size_t size){
 	}
 
 	return key;
+}
+
+void iteratorTest(){
+	const size_t keySize = 20;
+	const size_t headSize = 5;
+	const size_t tailSize = keySize - headSize;
+	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
+
+	std::map<size_t, Key> keys;
+
+	constexpr size_t keysCount = 10000;
+
+	Key current;
+	for(size_t i = 0; i < keysCount; ++i){
+		current = randomKey(keySize);
+		const size_t index = current.toIndex();
+
+		if(keys.find(index) == keys.cend()){
+			keys.insert(std::make_pair(index, current));
+		}
+	}
+
+	for(const std::pair<size_t, Key> &key : keys){
+		hlds.insert(key.second, key.first);
+	}
+
+
+	for(auto it = hlds.begin(); it != hlds.end(); ++it){
+		const Key &key = it.getKey();
+		const size_t index = key.toIndex();
+		const Value value = *it;
+
+		assert(value == index);
+
+		auto keyIt = keys.find(value);
+		assert(keyIt != keys.end());
+		keys.erase(keyIt);
+
+	}
+
+	assert(keys.empty());
 }
 
 void largeDataTest(){
@@ -285,12 +394,11 @@ void multiAccessTest(){
 }
 
 
-
 int main(){
+	TTF_TEST(keyTest);
 	TTF_TEST(insertionTest);
+	TTF_TEST(iteratorTest);
 	TTF_TEST(largeDataTest);
 	TTF_TEST(multiAccessTest);
-
-
 }
 

@@ -72,9 +72,7 @@ public:
 	}
 
 	iterator begin(){
-		const typename HeadsHolder<Key, Value>::iterator firstNotEmptyHead = std::find_if(this->headsHolder.begin(), this->headsHolder.end(), [](const typename HeadsHolder<Key, Value>::value_type &head){
-			return head.begin() != head.end();
-		});
+		const typename HeadsHolder<Key, Value>::iterator firstNotEmptyHead = this->headsHolder.first_not_empty();
 
 		if(firstNotEmptyHead == this->headsHolder.end()){
 			return this->end();

@@ -40,7 +40,7 @@ public:
 	}
 
 	HeadsIterator &operator=(HeadsIterator headsIterator){
-		this->headsKey = std::move(headsIterator.key);
+		this->headsKey = std::move(headsIterator.headsKey);
 
 		typename HeadsContainer<Key, Value>::iterator &base = *this;
 		base = std::move(headsIterator);
@@ -50,6 +50,7 @@ public:
 
 	HeadsIterator &operator++(){
 		++headsKey;
+
 		typename HeadsContainer<Key, Value>::iterator &base = *this;
 		++base;
 
