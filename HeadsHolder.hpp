@@ -3,8 +3,12 @@
 
 #include "TailTree.hpp"
 #include "HeadsIterator.hpp"
+#include "CountingFactory.hpp"
+#include "Node.hpp"
+#include "ValueNode.hpp"
 
 #include <vector>
+#include <functional>
 
 template<typename Key, typename Value>
 class HeadsIterator;
@@ -23,16 +27,49 @@ public:
 	typedef typename HeadsContainer<Key, Value>::value_type value_type;
 
 
-	HeadsHolder(const size_t headKeyLength, const size_t tailKeyLength): headKeyLength(headKeyLength), tailKeyLength(tailKeyLength){
+	HeadsHolder(
+		const size_t headKeyLength,
+		const size_t tailKeyLength,
+		const CountingFactory<Node<Key, Value>> &nodeFactory,
+		const CountingFactory<ValueNode<Key, Value>> &valueNodeFactory
+	):
+		headKeyLength(headKeyLength), tailKeyLength(tailKeyLength)
+	{
 		size_t headCount = 1;
 		for(size_t i = 0; i < this->headKeyLength; ++i){
 			headCount *= Key::value_type::alphabetSize;
 		}
 
-		const TailTree<Key, Value> emptyTailTree(this->tailKeyLength + 1);
+		const TailTree<Key, Value> emptyTailTree(this->tailKeyLength + 1, nodeFactory, valueNodeFactory);
 
 		HeadsContainer<Key, Value> &base = *this;
 		base.resize(headCount, emptyTailTree);
+	}
+
+	HeadsHolder(const HeadsHolder &o):
+		HeadsContainer<Key, Value>(o),
+		headKeyLength(o.headKeyLength),
+		tailKeyLength(o.tailKeyLength){}
+
+	HeadsHolder(HeadsHolder &&o):
+		HeadsContainer<Key, Value>(std::move(o)),
+		headKeyLength(o.headKeyLength),
+		tailKeyLength(o.tailKeyLength){}
+
+	HeadsHolder &operator=(HeadsHolder o){
+		assert(this->headKeyLength == o.headKeyLength);
+		assert(this->tailKeyLength == o.tailKeyLength);
+
+		this->HeadsContainer<Key, Value>::operator=(std::move(o));
+
+		return *this;
+	}
+
+	void reset(const CountingFactory<Node<Key, Value>> &nodeFactory,
+			   const CountingFactory<ValueNode<Key, Value>> &valueNodeFactory)
+	{
+		const TailTree<Key, Value> emptyTailTree(this->tailKeyLength + 1, nodeFactory, valueNodeFactory);
+		std::fill(this->HeadsContainer<Key, Value>::begin(), this->HeadsContainer<Key, Value>::end(), emptyTailTree);
 	}
 
 	iterator begin(){
@@ -70,7 +107,7 @@ public:
 		});
 
 		if(res == base.end()){
-			return iterator();
+			return this->end();
 		}
 
 		const size_t index = res - base.begin();
