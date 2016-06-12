@@ -1,0 +1,5 @@
+#ifndef HLDSDUMPER_HPP
+#define HLDSDUMPER_HPP
+
+#endif // HLDSDUMPER_HPP
+
