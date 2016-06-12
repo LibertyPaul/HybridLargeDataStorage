@@ -6,6 +6,7 @@
 #include "ValueNode.hpp"
 
 #include <vector>
+#include <stdexcept>
 
 template<typename Key, typename Value>
 using BranchContainer = std::vector<BaseNode<Key, Value> *>;
