@@ -1,6 +1,7 @@
 #include "HybridLargeDataStorage.hpp"
-#include "TinyTestFramework/TinyTestFramework.hpp"
+#include "../TinyTestFramework/TinyTestFramework.hpp"
 #include "Key.hpp"
+#include "../FASTQParser/Common.hpp"
 
 #include <iostream>
 #include <list>
@@ -15,26 +16,24 @@
 
 typedef uint64_t Value;
 
+constexpr size_t FASTQ::Common::Nucleotide::alphabetSize;
+constexpr FASTQ::Common::Nucleotide::value_type FASTQ::Common::Nucleotide::min_value;
+constexpr FASTQ::Common::Nucleotide::value_type FASTQ::Common::Nucleotide::max_value;
+
+using Key = Key_<FASTQ::Common::Nucleotide>;
+
+
+Key stringToKey(const char *str){
+	return Key::fromString(std::string(str));
+}
 
 void keyTest(){
-	const Key key1 = {
-		{KeyItem(Alphabet::T)},
-		{KeyItem(Alphabet::N)},
-		{KeyItem(Alphabet::G)},
-		{KeyItem(Alphabet::A)}
-	};
+	const Key key1 = stringToKey("TNGA");
 
 	const size_t index = key1.toIndex();
 	assert(key1 == Key::fromIndex(index, key1.size()));
 
-
-
-	const Key key2 = {
-		{KeyItem(Alphabet::A)},
-		{KeyItem(Alphabet::C)},
-		{KeyItem(Alphabet::N)},
-		{KeyItem(Alphabet::G)}
-	};
+	const Key key2 = stringToKey("ACNG");
 
 	const Key key12 = key1 + key2;
 
@@ -50,12 +49,7 @@ void keyTest(){
 
 void insertionTest(){
 	HybridLargeDataStorage<Key, Value> hlds(2, 2);
-	Key key1 = {
-		{KeyItem(Alphabet::A)},
-		{KeyItem(Alphabet::A)},
-		{KeyItem(Alphabet::A)},
-		{KeyItem(Alphabet::A)}
-	};
+	Key key1 = stringToKey("AAAA");
 	Value value1 = 42;
 
 	hlds.insert(key1, value1);
@@ -65,12 +59,7 @@ void insertionTest(){
 	assert(*res == value1);
 
 
-	Key key2 = {
-		{KeyItem(Alphabet::T)},
-		{KeyItem(Alphabet::T)},
-		{KeyItem(Alphabet::G)},
-		{KeyItem(Alphabet::C)}
-	};
+	Key key2 = stringToKey("TTGC");
 
 	const auto invRes = hlds.find(key2);
 
@@ -106,7 +95,7 @@ Key randomKey(const size_t size){
 
 void iteratorTest(){
 	const size_t keySize = 20;
-	const size_t headSize = 5;
+	const size_t headSize = 9;
 	const size_t tailSize = keySize - headSize;
 	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
 
@@ -157,7 +146,7 @@ void largeDataTest(){
 	std::default_random_engine rg(std::chrono::system_clock::now().time_since_epoch().count());
 	std::uniform_int_distribution<size_t> distr;
 
-	const size_t count = 1000000;
+	const size_t count = 100000;
 	for(size_t i = 0; i < count; ++i){
 		const Key currentKey = randomKey(keySize);
 		const Value currentValue = distr(rg);
@@ -207,15 +196,105 @@ void multiAccessTest(){
 	for(const auto &key : keys){
 		assert(*hlds.find(key) == startValue + 1);
 	}
+}
 
+void nodeCountTest(){
+	const size_t keySize = 10;
+	const size_t headSize = 5;
+	const size_t tailSize = keySize - headSize;
+	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
+
+	size_t expectedNodeCount = 0;
+	size_t expectedValueNodeCount = 0;
+
+	hlds.insert(stringToKey("AAAAAAAAAA"), 0);
+	expectedNodeCount += 5;
+	expectedValueNodeCount += 1;
+
+	const auto res1 = hlds.getProducedNodeCount();
+	assert(res1.first == expectedNodeCount);
+	assert(res1.second == expectedValueNodeCount);
+
+	hlds.insert(stringToKey("TAAAAAAAAA"), 0);
+	expectedNodeCount += 5;
+	expectedValueNodeCount += 1;
+
+	const auto res2 = hlds.getProducedNodeCount();
+	assert(res2.first == expectedNodeCount);
+	assert(res2.second == expectedValueNodeCount);
+
+	hlds.insert(stringToKey("AAAAAAAAAT"), 0);
+	expectedNodeCount += 0;
+	expectedValueNodeCount += 1;
+
+	const auto res3 = hlds.getProducedNodeCount();
+	assert(res3.first == expectedNodeCount);
+	assert(res3.second == expectedValueNodeCount);
+
+	hlds.insert(stringToKey("AAAAAAAATA"), 0);
+	expectedNodeCount += 1;
+	expectedValueNodeCount += 1;
+
+	const auto res4 = hlds.getProducedNodeCount();
+	assert(res4.first == expectedNodeCount);
+	assert(res4.second == expectedValueNodeCount);
+}
+
+void resetTest(){
+	const size_t keySize = 10;
+	const size_t headSize = 5;
+	const size_t tailSize = keySize - headSize;
+	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
+	hlds.insert(stringToKey("AAAAAAAAAA"), 0);
+	hlds.insert(stringToKey("AAAAAAAATA"), 0);
+	hlds.insert(stringToKey("AAAAAAAAAC"), 0);
+	hlds.insert(stringToKey("AAAAAAAATG"), 0);
+	hlds.insert(stringToKey("AAAAAACAAA"), 0);
+	hlds.insert(stringToKey("AAANAAAATA"), 0);
+
+	assert(hlds.getProducedNodeCount().first != 0);
+	assert(hlds.getProducedNodeCount().second != 0);
+
+	hlds.clear();
+
+	assert(hlds.getProducedNodeCount().first == 0);
+	assert(hlds.getProducedNodeCount().second == 0);
+
+	assert(hlds.find(stringToKey("AAAAAAAAAA")) == hlds.end());
+	assert(hlds.find(stringToKey("AAAAAAAATA")) == hlds.end());
+	assert(hlds.find(stringToKey("AAAAAAAAAC")) == hlds.end());
+	assert(hlds.find(stringToKey("AAAAAAAATG")) == hlds.end());
+	assert(hlds.find(stringToKey("AAAAAACAAA")) == hlds.end());
+	assert(hlds.find(stringToKey("AAANAAAATA")) == hlds.end());
+
+	assert(hlds.begin() == hlds.end());
 }
 
 
 int main(){
 	TTF_TEST(keyTest);
+	TTF_TEST(nodeCountTest);
 	TTF_TEST(insertionTest);
 	TTF_TEST(iteratorTest);
 	TTF_TEST(largeDataTest);
 	TTF_TEST(multiAccessTest);
+	TTF_TEST(resetTest);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

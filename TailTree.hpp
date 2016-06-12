@@ -2,7 +2,10 @@
 #define TAILTREE_HPP
 
 #include "BaseNode.hpp"
+#include "Node.hpp"
+#include "ValueNode.hpp"
 #include "TailTreeIterator.hpp"
+#include "CountingFactory.hpp"
 
 #include <stdexcept>
 
@@ -11,16 +14,44 @@ class TailTree{
 	BaseNode<Key, Value> *root = nullptr;
 	const size_t depth;
 
+	const CountingFactory<Node<Key, Value>> &nodeFactory;
+	const CountingFactory<ValueNode<Key, Value>> &valueNodeFactory;
+
 public:
 	typedef TailTreeIterator<Key, Value> iterator;
 
-	TailTree(const size_t depth): depth(depth){}
+	TailTree(
+		const size_t depth,
+		const CountingFactory<Node<Key, Value>> &nodeFactory,
+		const CountingFactory<ValueNode<Key, Value>> &valueNodeFactory
+	):
+		depth(depth),
+		nodeFactory(nodeFactory),
+		valueNodeFactory(valueNodeFactory)
+	{
 
-	TailTree(const TailTree &tailTree): root(tailTree.root), depth(tailTree.depth){}
+	}
 
-	TailTree(TailTree &&tailTree): depth(tailTree.depth){
-		this->root = tailTree.root;
+	TailTree(const TailTree &tailTree):
+		root(tailTree.root),
+		depth(tailTree.depth),
+		nodeFactory(tailTree.nodeFactory),
+		valueNodeFactory(tailTree.valueNodeFactory)
+	{
+
+	}
+
+	TailTree(TailTree &&tailTree):
+		root(tailTree.root),
+		depth(tailTree.depth),
+		nodeFactory(tailTree.nodeFactory),
+		valueNodeFactory(tailTree.valueNodeFactory)
+	{
 		tailTree.root = nullptr;
+	}
+
+	~TailTree(){
+		delete this->root;
 	}
 
 	void addTail(const Key &key, Value value){
@@ -31,7 +62,7 @@ public:
 			Node<Key, Value> *node = nullptr;
 
 			if(*current == nullptr){
-				node = new Node<Key, Value>();
+				node = this->nodeFactory.create();
 				*current = node;
 			}
 			else{
@@ -47,7 +78,7 @@ public:
 			throw std::runtime_error("Node with this key already exists");
 		}
 
-		*current = new ValueNode<Key, Value>(std::move(value));
+		*current = this->valueNodeFactory.create(std::move(value));
 	}
 
 public:
@@ -109,6 +140,8 @@ public:
 
 	TailTree &operator=(const TailTree &tailTree){ // TODO check if deep copy is needed
 		assert(this->depth == tailTree.depth);
+
+		delete this->root;
 
 		this->root = tailTree.root;
 

@@ -2,75 +2,20 @@
 #define KEY_HPP
 
 #include <vector>
+#include <string>
 
-enum class Alphabet{
-	A = 0, T, G, C, N
-};
 
-class KeyItem{
-	Alphabet index;
-public:
-	typedef Alphabet value_type;
-	typedef size_t index_t;
-	static constexpr size_t alphabetSize = 5;
-	static constexpr Alphabet min_value = Alphabet::A;
-	static constexpr Alphabet max_value = Alphabet::N;
-
-	explicit KeyItem(const Alphabet index): index(index){}
-
-	size_t toIndex() const{
-		return static_cast<size_t>(index);
-	}
-
-	static KeyItem fromIndex(const size_t index){
-		if(index > static_cast<size_t>(max_value)){
-			throw std::overflow_error("");
-		}
-
-		return KeyItem(static_cast<Alphabet>(index));
-	}
-
-	KeyItem &operator=(const KeyItem &keyItem){
-		this->index = keyItem.index;
-		return *this;
-	}
-
-	bool operator==(const Alphabet &alphabet) const{
-		return this->index == alphabet;
-	}
-
-	bool operator==(const KeyItem &o) const{
-		return *this == o.index;
-	}
-
-	bool operator!=(const KeyItem &o) const{
-		return !(*this == o);
-	}
-
-	bool operator<(const KeyItem &o) const{
-		return this->index < o.index;
-	}
-
-	KeyItem &operator++(){
-		*this = KeyItem::fromIndex(this->toIndex() + 1);
-		return *this;
-	}
-};
-
-constexpr size_t KeyItem::alphabetSize;
-constexpr Alphabet KeyItem::min_value;
-constexpr Alphabet KeyItem::max_value;
-
-class Key : public std::vector<KeyItem>{
+template<typename KeyItem>
+class Key_ : public std::vector<KeyItem>{
 public:
 
-	Key(){}
-	Key(Key &&key): std::vector<KeyItem>(static_cast<std::vector<KeyItem> &&>(key)){}
-	Key(const Key &key): std::vector<KeyItem>(key){}
-	Key(const size_t size): std::vector<KeyItem>(size, KeyItem(value_type::min_value)){}
-	Key(std::initializer_list<KeyItem> il): std::vector<KeyItem>(il){}
+	Key_(){}
+	Key_(Key_ &&key): std::vector<KeyItem>(static_cast<std::vector<KeyItem> &&>(key)){}
+	Key_(const Key_ &key): std::vector<KeyItem>(key){}
+	Key_(const size_t size): std::vector<KeyItem>(size, KeyItem(KeyItem::min_value)){}
+	Key_(std::initializer_list<KeyItem> il): std::vector<KeyItem>(il){}
 
-	void resize(const size_t size, const value_type::value_type &fillValue = value_type::min_value){
+	void resize(const size_t size, const typename KeyItem::value_type &fillValue = KeyItem::min_value){
 		std::vector<KeyItem> &base = *this;
 		base.resize(size, KeyItem(fillValue));
 	}
@@ -81,19 +26,19 @@ public:
 
 		for(auto it = this->crbegin(); it != this->crend(); ++it){
 			result += it->toIndex() * multiplier;
-			multiplier *= value_type::alphabetSize;
+			multiplier *= KeyItem::alphabetSize;
 		}
 
 		return result;
 	}
 
-	static Key fromIndex(size_t index, const size_t size){
-		Key resultReversed;
+	static Key_ fromIndex(size_t index, const size_t size){
+		Key_ resultReversed;
 		resultReversed.reserve(size);
 
 		while(index != 0){
-			const size_t currentIndex = index % value_type::alphabetSize;
-			index /= value_type::alphabetSize;
+			const size_t currentIndex = index % KeyItem::alphabetSize;
+			index /= KeyItem::alphabetSize;
 			const KeyItem currentKeyItem = KeyItem::fromIndex(currentIndex);
 			resultReversed.push_back(currentKeyItem);
 		}
@@ -103,10 +48,10 @@ public:
 		}
 
 		if(resultReversed.size() < size){
-			resultReversed.resize(size, value_type::min_value);
+			resultReversed.resize(size, KeyItem::min_value);
 		}
 
-		Key result;
+		Key_ result;
 		result.resize(resultReversed.size());
 
 		std::copy(resultReversed.crbegin(), resultReversed.crend(), result.begin());
@@ -114,7 +59,29 @@ public:
 		return result;
 	}
 
-	Key &operator=(Key key){
+	std::string toString() const{
+		std::string result;
+		result.reserve(this->size());
+
+		for(const KeyItem &value : *this){
+			result.push_back(value.toSymbol());
+		}
+
+		return result;
+	}
+
+	static Key_ fromString(const std::string &str){
+		Key_ result;
+		result.reserve(str.size());
+
+		for(const char symbol : str){
+			result.push_back(KeyItem::fromSymbol(symbol));
+		}
+
+		return result;
+	}
+
+	Key_ &operator=(Key_ key){
 		std::vector<KeyItem> &base1 = *this;
 		std::vector<KeyItem> &base2 = key;
 
@@ -123,12 +90,12 @@ public:
 		return *this;
 	}
 
-	Key &operator++(){
-		Key keyCopy = *this;
+	Key_ &operator++(){
+		Key_ keyCopy = *this;
 		auto it = keyCopy.rbegin();
 		while(it != keyCopy.rend()){
-			if(*it == value_type::max_value){
-				*it = KeyItem(value_type::min_value);
+			if(*it == KeyItem::max_value){
+				*it = KeyItem(KeyItem::min_value);
 			}
 			else{
 				++*it;
@@ -147,13 +114,13 @@ public:
 		return *this;
 	}
 
-	void push_back(value_type value){
+	void push_back(KeyItem value){
 		std::vector<KeyItem> &base1 = *this;
 		base1.push_back(std::move(value));
 	}
 
-	Key operator+(const Key &key) const{
-		Key result(*this);
+	Key_ operator+(const Key_ &key) const{
+		Key_ result(*this);
 		result.reserve(this->size() + key.size());
 
 		for(const auto val : key){
@@ -164,7 +131,8 @@ public:
 	}
 };
 
-bool operator<(const Key &lhs, const Key &rhs){
+template<typename KeyItem_>
+bool operator<(const Key_<KeyItem_> &lhs, const Key_<KeyItem_> &rhs){
 	assert(lhs.size() == rhs.size());
 
 	for(size_t i = 0; i < lhs.size(); ++i){

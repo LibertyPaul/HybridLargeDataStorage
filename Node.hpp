@@ -3,6 +3,7 @@
 
 #include "BaseNode.hpp"
 #include "TailTree.hpp"
+#include "CountingFactory.hpp"
 
 #include <array>
 #include <utility>
@@ -21,16 +22,17 @@ class Node : public BaseNode<Key, Value>{
 	typedef std::array<BaseNode<Key, Value> *, Key::value_type::alphabetSize> TailsStorage;
 	TailsStorage tails;
 
-public:
 	Node(){
 		this->tails.fill(nullptr);
 	}
 
 	virtual ~Node(){
-		for(auto &tail : this->tails){
+		for(const auto &tail : this->tails){
 			delete tail;
 		}
 	}
+
+public:
 
 	enum class Direction{
 		lower,
@@ -75,6 +77,8 @@ public:
 
 	friend class TailTree<Key, Value>;
 	friend typename TailTree<Key, Value>::iterator;
+	friend class CountingFactory<Node>;
+
 };
 
 #endif // NODE_HPP

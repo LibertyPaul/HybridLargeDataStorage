@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <cassert>
+#include <stdexcept>
 
 template<typename Key, typename Value>
 class BaseNode;

@@ -20,7 +20,9 @@ HEADERS += \
     HeadsIterator.hpp \
     HeadsHolder.hpp \
     BranchHolder.hpp \
-    Key.hpp
+    Key.hpp \
+    CountingFactory.hpp \
+    HLDSDumper.hpp
 
 INCLUDEPATH += ./TinyTestFramework/
 INCLUDEPATH -= ./TinyTestFramework/main.cpp
