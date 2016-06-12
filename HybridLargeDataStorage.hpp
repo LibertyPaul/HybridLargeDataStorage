@@ -2,15 +2,19 @@
 #define HYBRIDLARGEDATASTORAGE_HPP
 
 #include "BaseNode.hpp"
+#include "Node.hpp"
+#include "ValueNode.hpp"
 #include "TailTree.hpp"
 #include "HLDSIterator.hpp"
 #include "HeadsHolder.hpp"
+#include "CountingFactory.hpp"
 
 #include <utility>
 #include <vector>
 #include <cassert>
 #include <cstddef>
 #include <algorithm>
+#include <stdexcept>
 
 template<typename Key, typename Value>
 class TailTree;
@@ -26,16 +30,58 @@ public:
 private:
 	const size_t headSize;
 	const size_t tailSize;
+
+	CountingFactory<Node<Key, Value>> nodeFactory;
+	CountingFactory<ValueNode<Key, Value>> valueNodeFactory;
+
 	HeadsHolder<Key, Value> headsHolder;
 
 
-public:
-	HybridLargeDataStorage(const size_t headSize, const size_t tailSize): headSize(headSize), tailSize(tailSize), headsHolder(headSize, tailSize){
 
+public:
+	HybridLargeDataStorage(const size_t headSize, const size_t tailSize):
+		headSize(headSize),
+		tailSize(tailSize),
+		nodeFactory(),
+		valueNodeFactory(),
+		headsHolder(headSize, tailSize, nodeFactory, valueNodeFactory){}
+
+	HybridLargeDataStorage(const HybridLargeDataStorage &o):
+		headSize(o.headSize),
+		tailSize(o.tailSize),
+		nodeFactory(o.nodeFactory),
+		valueNodeFactory(o.valueNodeFactory),
+		headsHolder(o.headsHolder){}
+
+	HybridLargeDataStorage(HybridLargeDataStorage &&o):
+		headSize(o.headSize),
+		tailSize(o.tailSize),
+		nodeFactory(std::move(o.nodeFactory)),
+		valueNodeFactory(std::move(o.valueNodeFactory)),
+		headsHolder(std::move(o.headsHolder)){}
+
+	~HybridLargeDataStorage(){}
+
+	HybridLargeDataStorage &operator=(HybridLargeDataStorage o){
+		if(this->headSize != o.headSize){
+			throw std::logic_error("this->headSize must be equal to o.headSize");
+		}
+
+		if(this->tailSize != o.tailSize){
+			throw std::logic_error("this->tailSize must be equal to o.tailSize");
+		}
+
+		this->nodeFactory = std::move(o.nodeFactory);
+		this->valueNodeFactory = std::move(o.valueNodeFactory);
+		this->headsHolder = std::move(o.headsHolder);
+
+		return *this;
 	}
 
-	~HybridLargeDataStorage(){
-
+	void clear(){
+		this->nodeFactory.reset();
+		this->valueNodeFactory.reset();
+		this->headsHolder.reset(this->nodeFactory, this->valueNodeFactory);
 	}
 
 	void insert(Key key, const Value &value){
@@ -86,6 +132,13 @@ public:
 
 	iterator end(){
 		return iterator();
+	}
+
+	typedef size_t NodeCount;
+	typedef size_t ValueNodeCount;
+
+	std::pair<NodeCount, ValueNodeCount> getProducedNodeCount() const{
+		return std::make_pair(this->nodeFactory.producedItemsCount(), this->valueNodeFactory.producedItemsCount());
 	}
 
 };
