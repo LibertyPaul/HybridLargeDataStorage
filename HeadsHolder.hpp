@@ -65,11 +65,10 @@ public:
 		return *this;
 	}
 
-	void reset(const CountingFactory<Node<Key, Value>> &nodeFactory,
-			   const CountingFactory<ValueNode<Key, Value>> &valueNodeFactory)
-	{
-		const TailTree<Key, Value> emptyTailTree(this->tailKeyLength + 1, nodeFactory, valueNodeFactory);
-		std::fill(this->HeadsContainer<Key, Value>::begin(), this->HeadsContainer<Key, Value>::end(), emptyTailTree);
+	void reset(){
+		for(TailTree<Key, Value> &tailTree : *this){
+			tailTree.clear();
+		}
 	}
 
 	size_t size() const{
