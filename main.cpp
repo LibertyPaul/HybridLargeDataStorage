@@ -198,46 +198,17 @@ void multiAccessTest(){
 	}
 }
 
-void nodeCountTest(){
+void RAMUsageTest(){
 	const size_t keySize = 10;
 	const size_t headSize = 5;
 	const size_t tailSize = keySize - headSize;
 	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
 
-	size_t expectedNodeCount = 0;
-	size_t expectedValueNodeCount = 0;
+	size_t currentSize = hlds.getApproximateRAMUsage();
 
 	hlds.insert(stringToKey("AAAAAAAAAA"), 0);
-	expectedNodeCount += 5;
-	expectedValueNodeCount += 1;
-
-	const auto res1 = hlds.getProducedNodeCount();
-	assert(res1.first == expectedNodeCount);
-	assert(res1.second == expectedValueNodeCount);
-
-	hlds.insert(stringToKey("TAAAAAAAAA"), 0);
-	expectedNodeCount += 5;
-	expectedValueNodeCount += 1;
-
-	const auto res2 = hlds.getProducedNodeCount();
-	assert(res2.first == expectedNodeCount);
-	assert(res2.second == expectedValueNodeCount);
-
-	hlds.insert(stringToKey("AAAAAAAAAT"), 0);
-	expectedNodeCount += 0;
-	expectedValueNodeCount += 1;
-
-	const auto res3 = hlds.getProducedNodeCount();
-	assert(res3.first == expectedNodeCount);
-	assert(res3.second == expectedValueNodeCount);
-
-	hlds.insert(stringToKey("AAAAAAAATA"), 0);
-	expectedNodeCount += 1;
-	expectedValueNodeCount += 1;
-
-	const auto res4 = hlds.getProducedNodeCount();
-	assert(res4.first == expectedNodeCount);
-	assert(res4.second == expectedValueNodeCount);
+	const size_t res1 = hlds.getApproximateRAMUsage();
+	assert(res1 > currentSize);
 }
 
 void resetTest(){
@@ -245,6 +216,9 @@ void resetTest(){
 	const size_t headSize = 5;
 	const size_t tailSize = keySize - headSize;
 	HybridLargeDataStorage<Key, Value> hlds(headSize, tailSize);
+
+	const size_t startRAMUsage = hlds.getApproximateRAMUsage();
+
 	hlds.insert(stringToKey("AAAAAAAAAA"), 0);
 	hlds.insert(stringToKey("AAAAAAAATA"), 0);
 	hlds.insert(stringToKey("AAAAAAAAAC"), 0);
@@ -252,13 +226,11 @@ void resetTest(){
 	hlds.insert(stringToKey("AAAAAACAAA"), 0);
 	hlds.insert(stringToKey("AAANAAAATA"), 0);
 
-	assert(hlds.getProducedNodeCount().first != 0);
-	assert(hlds.getProducedNodeCount().second != 0);
+	assert(startRAMUsage != hlds.getApproximateRAMUsage());
 
 	hlds.clear();
 
-	assert(hlds.getProducedNodeCount().first == 0);
-	assert(hlds.getProducedNodeCount().second == 0);
+	assert(startRAMUsage == hlds.getApproximateRAMUsage());
 
 	assert(hlds.find(stringToKey("AAAAAAAAAA")) == hlds.end());
 	assert(hlds.find(stringToKey("AAAAAAAATA")) == hlds.end());
@@ -273,7 +245,7 @@ void resetTest(){
 
 int main(){
 	TTF_TEST(keyTest);
-	TTF_TEST(nodeCountTest);
+	TTF_TEST(RAMUsageTest);
 	TTF_TEST(insertionTest);
 	TTF_TEST(iteratorTest);
 	TTF_TEST(largeDataTest);

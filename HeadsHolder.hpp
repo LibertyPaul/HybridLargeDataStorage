@@ -72,6 +72,10 @@ public:
 		std::fill(this->HeadsContainer<Key, Value>::begin(), this->HeadsContainer<Key, Value>::end(), emptyTailTree);
 	}
 
+	size_t size() const{
+		return this->HeadsContainer<Key, Value>::size();
+	}
+
 	iterator begin(){
 		Key headKey = Key::fromIndex(0, this->headKeyLength);
 

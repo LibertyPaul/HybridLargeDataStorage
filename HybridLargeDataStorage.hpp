@@ -137,8 +137,12 @@ public:
 	typedef size_t NodeCount;
 	typedef size_t ValueNodeCount;
 
-	std::pair<NodeCount, ValueNodeCount> getProducedNodeCount() const{
-		return std::make_pair(this->nodeFactory.producedItemsCount(), this->valueNodeFactory.producedItemsCount());
+	size_t getApproximateRAMUsage() const{
+		const size_t headsHolderSize = this->headsHolder.size() * sizeof(typename HeadsHolder<Key, Value>::value_type);
+		const size_t nodesSize = this->nodeFactory.producedItemsCount() * sizeof(Node<Key, Value>);
+		const size_t valueNodesSize = this->valueNodeFactory.producedItemsCount() * sizeof(ValueNode<Key, Value>);
+
+		return headsHolderSize + nodesSize + valueNodesSize;
 	}
 
 };
