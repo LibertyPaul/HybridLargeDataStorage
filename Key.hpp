@@ -91,9 +91,8 @@ public:
 	}
 
 	Key_ &operator++(){
-		Key_ keyCopy = *this;
-		auto it = keyCopy.rbegin();
-		while(it != keyCopy.rend()){
+		auto it = this->rbegin();
+		while(it != this->rend()){
 			if(*it == KeyItem::max_value){
 				*it = KeyItem(KeyItem::min_value);
 			}
@@ -105,11 +104,9 @@ public:
 			++it;
 		}
 
-		if(it == keyCopy.rend()){
-			throw std::overflow_error("");
+		if(it == this->rend()){
+			std::fill(this->begin(), this->end(), KeyItem(KeyItem::min_value));
 		}
-
-		*this = std::move(keyCopy);
 
 		return *this;
 	}

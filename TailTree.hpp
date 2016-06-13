@@ -147,6 +147,11 @@ public:
 
 		return *this;
 	}
+
+	void clear(){
+		delete this->root;
+		this->root = nullptr;
+	}
 };
 
 #endif // TAILTREE_HPP
