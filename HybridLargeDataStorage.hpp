@@ -81,20 +81,19 @@ public:
 	void clear(){
 		this->nodeFactory.reset();
 		this->valueNodeFactory.reset();
-		this->headsHolder.reset(this->nodeFactory, this->valueNodeFactory);
+		this->headsHolder.reset();
 	}
 
 	void insert(Key key, const Value &value){
 		assert(key.size() == this->headSize + this->tailSize);
 
-		Key headKey(this->headSize);
-		std::copy(key.cbegin(), key.cbegin() + this->headSize, headKey.begin());
-
-		typename HeadsHolder<Key, Value>::iterator head = this->headsHolder.find(std::move(headKey));
-		assert(head != this->headsHolder.end());
-
 		Key tailKey(this->tailSize);
 		std::copy(key.cbegin() + this->headSize, key.cend(), tailKey.begin());
+
+		key.resize(this->headSize);
+
+		typename HeadsHolder<Key, Value>::iterator head = this->headsHolder.find(std::move(key));
+		assert(head != this->headsHolder.end());
 
 		head->addTail(tailKey, value);
 	}
