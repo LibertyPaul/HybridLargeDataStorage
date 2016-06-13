@@ -49,7 +49,7 @@ class HLDSBinaryDumper : public HLDSDumperBase<Key, Value>{
 		size_t currentPos = 0;
 
 		for(size_t i = 0; i < key.size(); ++i){
-			const std::bitset<Key::value_type::binarySize> current = key.at(i).toBinary();
+			const std::bitset<Key::value_type::binarySize> current = key.at(i).toBitset();
 			for(size_t i = 0; i < current.size(); ++i){
 				if(current.test(i)){
 					const size_t bitPos = currentPos % 8;
