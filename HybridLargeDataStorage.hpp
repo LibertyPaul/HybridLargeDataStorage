@@ -15,6 +15,8 @@
 #include <cstddef>
 #include <algorithm>
 #include <stdexcept>
+#include <random>
+#include <chrono>
 
 template<typename Key, typename Value>
 class TailTree;
@@ -28,8 +30,10 @@ public:
 	typedef HLDSIterator<Key, Value> iterator;
 	
 private:
-	const size_t headSize;
-	const size_t tailSize;
+	size_t id;
+	size_t headSize;
+	size_t tailSize;
+	size_t itemCount = 0;
 
 	CountingFactory<Node<Key, Value>> nodeFactory;
 	CountingFactory<ValueNode<Key, Value>> valueNodeFactory;
@@ -37,14 +41,25 @@ private:
 	HeadsHolder<Key, Value> headsHolder;
 
 
+	static size_t generateRandomId(){
+		static std::default_random_engine re(std::chrono::system_clock::now().time_since_epoch().count());
+		static std::uniform_int_distribution<size_t> distr;
+
+		return distr(re);
+	}
+
 
 public:
-	HybridLargeDataStorage(const size_t headSize, const size_t tailSize):
+	HybridLargeDataStorage(const size_t id, const size_t headSize, const size_t tailSize):
+		id(id),
 		headSize(headSize),
 		tailSize(tailSize),
 		nodeFactory(),
 		valueNodeFactory(),
 		headsHolder(headSize, tailSize, nodeFactory, valueNodeFactory){}
+
+	HybridLargeDataStorage(const size_t headSize, const size_t tailSize):
+		HybridLargeDataStorage(HybridLargeDataStorage::generateRandomId(), headSize, tailSize){}
 
 	HybridLargeDataStorage(const HybridLargeDataStorage &o):
 		headSize(o.headSize),
@@ -84,8 +99,16 @@ public:
 		this->headsHolder.reset();
 	}
 
+	size_t keySize() const{
+		return this->headSize + this->tailSize;
+	}
+
+	size_t getId() const{
+		return this->id;
+	}
+
 	void insert(Key key, const Value &value){
-		assert(key.size() == this->headSize + this->tailSize);
+		assert(key.size() == this->keySize());
 
 		Key tailKey(this->tailSize);
 		std::copy(key.cbegin() + this->headSize, key.cend(), tailKey.begin());
@@ -96,10 +119,11 @@ public:
 		assert(head != this->headsHolder.end());
 
 		head->addTail(tailKey, value);
+		++this->itemCount;
 	}
 
 	iterator find(const Key &key){
-		assert(key.size() == this->headSize + this->tailSize);
+		assert(key.size() == this->keySize());
 
 		Key headKey(this->headSize);
 		std::copy(key.begin(), key.begin() + this->headSize, headKey.begin());
@@ -144,6 +168,17 @@ public:
 		return headsHolderSize + nodesSize + valueNodesSize;
 	}
 
+	bool operator==(/*const */HybridLargeDataStorage &o)/*const*/{
+		if(this->itemCount != o.itemCount){
+			return false;
+		}
+
+		return std::equal(this->begin(), this->end(), o.begin());
+	}
+
+	bool operator!=(/*const */HybridLargeDataStorage &o)/*const*/{
+		return !(*this == o);
+	}
 };
 
 #endif // HYBRIDLARGEDATASTORAGE_HPP

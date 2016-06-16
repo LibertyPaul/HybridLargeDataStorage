@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
 
 
 template<typename KeyItem>
@@ -16,8 +17,7 @@ public:
 	Key_(std::initializer_list<KeyItem> il): std::vector<KeyItem>(il){}
 
 	void resize(const size_t size, const typename KeyItem::value_type &fillValue = KeyItem::min_value){
-		std::vector<KeyItem> &base = *this;
-		base.resize(size, KeyItem(fillValue));
+		this->std::vector<KeyItem>::resize(size, KeyItem(fillValue));
 	}
 
 	size_t toIndex() const{
@@ -82,11 +82,7 @@ public:
 	}
 
 	Key_ &operator=(Key_ key){
-		std::vector<KeyItem> &base1 = *this;
-		std::vector<KeyItem> &base2 = key;
-
-		base1 = std::move(base2);
-
+		this->std::vector<KeyItem>::operator=(std::move(key));
 		return *this;
 	}
 
@@ -112,8 +108,7 @@ public:
 	}
 
 	void push_back(KeyItem value){
-		std::vector<KeyItem> &base1 = *this;
-		base1.push_back(std::move(value));
+		this->std::vector<KeyItem>::push_back(std::move(value));
 	}
 
 	Key_ operator+(const Key_ &key) const{
@@ -132,13 +127,12 @@ template<typename KeyItem_>
 bool operator<(const Key_<KeyItem_> &lhs, const Key_<KeyItem_> &rhs){
 	assert(lhs.size() == rhs.size());
 
-	for(size_t i = 0; i < lhs.size(); ++i){
-		if(lhs[i] != rhs[i]){
-			return lhs[i] < rhs[i];
-		}
+	const auto mismatchedPair = std::mismatch(lhs.cbegin(), lhs.cend(), rhs.cbegin());
+	if(mismatchedPair.first == lhs.cend() && mismatchedPair.second == rhs.cend()){
+		return false;
 	}
 
-	return false;
+	return *mismatchedPair.first < *mismatchedPair.second;
 }
 
 #endif // KEY_HPP

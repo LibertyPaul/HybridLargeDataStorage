@@ -22,7 +22,8 @@ HEADERS += \
     BranchHolder.hpp \
     Key.hpp \
     CountingFactory.hpp \
-    HLDSDumper.hpp
+    HLDSBinaryDumpMerger.hpp \
+    HLDSDump.hpp
 
 INCLUDEPATH += ./TinyTestFramework/
 INCLUDEPATH -= ./TinyTestFramework/main.cpp

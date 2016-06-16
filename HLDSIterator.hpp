@@ -5,6 +5,7 @@
 #include "HeadsIterator.hpp"
 
 #include <utility>
+#include <iterator>
 
 template<typename Key, typename Value>
 class HybridLargeDataStorage;
@@ -24,6 +25,13 @@ protected:
 	}
 
 public:
+	typedef size_t						difference_type;
+	typedef Value						value_type;
+	typedef Value *						pointer;
+	typedef Value &						reference;
+	typedef std::forward_iterator_tag	iterator_category;
+
+
 	HLDSIterator(): isSet(false){}
 
 	HLDSIterator(

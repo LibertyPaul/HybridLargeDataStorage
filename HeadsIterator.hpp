@@ -12,6 +12,13 @@ class HeadsIterator : protected HeadsContainer<Key, Value>::iterator{
 	Key headsKey;
 
 public:
+	typedef typename HeadsContainer<Key, Value>::iterator::difference_type		difference_type;
+	typedef typename HeadsContainer<Key, Value>::iterator::value_type			value_type;
+	typedef typename HeadsContainer<Key, Value>::iterator::pointer				pointer;
+	typedef typename HeadsContainer<Key, Value>::iterator::reference			reference;
+	typedef typename HeadsContainer<Key, Value>::iterator::iterator_category	iterator_category;
+
+
 	explicit HeadsIterator(){}
 
 	HeadsIterator(typename HeadsContainer<Key, Value>::iterator it, Key headsKey):
