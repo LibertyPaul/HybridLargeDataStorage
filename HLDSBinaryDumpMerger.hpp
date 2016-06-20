@@ -18,7 +18,16 @@ public:
 
 	void run(){
 		while(this->reader1.hasNext() && this->reader2.hasNext()){
-			if(this->reader1.peek().key < this->reader2.peek().key){
+			if(this->reader1.peek().key == this->reader2.peek().key){
+				const Key key = this->reader1.peek().key;
+				const Value value = this->reader1.peek().value + this->reader2.peek().value;
+
+				this->writer.write(HLDSDumpRecord<Key, Value>(key, value));
+
+				this->reader1.read();
+				this->reader2.read();
+			}
+			else if(this->reader1.peek().key < this->reader2.peek().key){
 				this->writer.write(this->reader1.read());
 			}
 			else{
