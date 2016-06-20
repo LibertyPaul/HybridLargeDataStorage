@@ -107,34 +107,38 @@ public:
 		return this->id;
 	}
 
-	void insert(Key key, const Value &value){
-		assert(key.size() == this->keySize());
-
+private:
+	std::pair<Key, Key> splitKey(Key key) const{
 		Key tailKey(this->tailSize);
 		std::copy(key.cbegin() + this->headSize, key.cend(), tailKey.begin());
 
 		key.resize(this->headSize);
 
-		typename HeadsHolder<Key, Value>::iterator head = this->headsHolder.find(std::move(key));
+		return std::make_pair(std::move(key), std::move(tailKey));
+	}
+
+public:
+	void insert(Key key, const Value &value){
+		assert(key.size() == this->keySize());
+
+		std::pair<Key, Key> splittedKey = this->splitKey(std::move(key));
+
+		typename HeadsHolder<Key, Value>::iterator head = this->headsHolder.find(std::move(splittedKey.first));
 		assert(head != this->headsHolder.end());
 
-		head->addTail(tailKey, value);
+		head->addTail(std::move(splittedKey.second), value);
 		++this->itemCount;
 	}
 
 	iterator find(const Key &key){
 		assert(key.size() == this->keySize());
 
-		Key headKey(this->headSize);
-		std::copy(key.begin(), key.begin() + this->headSize, headKey.begin());
+		std::pair<Key, Key> splittedKey = this->splitKey(std::move(key));
 
-		const typename HeadsHolder<Key, Value>::iterator headsIterator = this->headsHolder.find(headKey);
+		const typename HeadsHolder<Key, Value>::iterator headsIterator = this->headsHolder.find(std::move(splittedKey.first));
 		assert(headsIterator != this->headsHolder.end());
 
-		Key tailKey(this->tailSize);
-		std::copy(key.begin() + this->headSize, key.end(), tailKey.begin());
-
-		typename TailTree<Key, Value>::iterator tailIterator = headsIterator->find(std::move(tailKey));
+		typename TailTree<Key, Value>::iterator tailIterator = headsIterator->find(std::move(splittedKey.second));
 		typename TailTree<Key, Value>::iterator tailTreeEnd = headsIterator->end();
 
 		return iterator(std::move(headsIterator), this->headsHolder.end(), std::move(tailIterator), std::move(tailTreeEnd));
